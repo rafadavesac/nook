@@ -1,18 +1,56 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+// Layout das abas: desenha a barra inferior e diz quais telas pertencem a ela.
+// A ordem dos <Tabs.Screen> aqui é a ordem em que os ícones aparecem na barra.
+import { Tabs } from 'expo-router';
+import Ionicons from '@react-native-vector-icons/ionicons';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
-
-SplashScreen.preventAutoHideAsync();
-
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+export default function TabsLayout() {
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <Tabs>
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Pastas',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="folder-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="favoritos"
+        options={{
+          title: 'Favoritos',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="star-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="novo-item"
+        options={{
+          title: 'Novo item',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="add-circle" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="caixa"
+        options={{
+          title: 'Caixa',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="mail-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="ajustes"
+        options={{
+          title: 'Ajustes',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="settings-outline" color={color} size={size} />
+          ),
+        }}
+      />
+    </Tabs>
   );
 }
