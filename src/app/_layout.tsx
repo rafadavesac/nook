@@ -51,6 +51,12 @@ export default function TabsLayout() {
           ),
         }}
       />
+
+            {/* Rotas dinâmicas: existem e recebem parâmetro, mas não ganham botão na barra */}
+      <Tabs.Screen name="colecao/[id]" options={{ href: null }} />
+      <Tabs.Screen name="item/[id]" options={{ href: null }} />
+      
     </Tabs>
+    
   );
 }
