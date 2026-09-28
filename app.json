@@ -33,7 +33,16 @@
           "imageWidth": 76
         }
       ],
-      "@react-native-vector-icons/ionicons"
+      "@react-native-vector-icons/ionicons",
+      [
+        "expo-sharing",
+        {
+          "android": {
+            "enabled": true,
+            "singleShareMimeTypes": ["text/plain"]
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

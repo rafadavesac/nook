@@ -52,9 +52,11 @@ export default function TabsLayout() {
         }}
       />
 
-            {/* Rotas dinâmicas: existem e recebem parâmetro, mas não ganham botão na barra */}
+      {/* Rotas dinâmicas: existem e recebem parâmetro, mas não ganham botão na barra */}
       <Tabs.Screen name="colecao/[id]" options={{ href: null }} />
       <Tabs.Screen name="item/[id]" options={{ href: null }} />
+      {/* Tela que recebe conteúdo compartilhado por outros apps (só teste por enquanto) */}
+      <Tabs.Screen name="handle-share" options={{ href: null }} />
       
     </Tabs>
     
