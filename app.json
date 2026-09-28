@@ -17,7 +17,8 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.rafadavesac.nook"
     },
     "web": {
       "output": "static",
@@ -39,7 +40,9 @@
         {
           "android": {
             "enabled": true,
-            "singleShareMimeTypes": ["text/plain"]
+            "singleShareMimeTypes": [
+              "text/plain"
+            ]
           }
         }
       ]
@@ -47,6 +50,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "719d52d4-c4f0-4dc5-b87a-80bf2d278e50"
+      }
     }
   }
 }
