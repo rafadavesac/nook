@@ -24,7 +24,7 @@ export default function Inicio() {
 
       <Text style={styles.titulo}>Pastas</Text>
 
-      <Link href="/colecao/cursos" style={styles.link}>
+      <Link href="/colecao/6f60d74f-7d2d-475e-89cd-b9101cd8312e" style={styles.link}>
         Abrir coleção "cursos" (teste)
       </Link>
       <Link href="/item/123" style={styles.link}>

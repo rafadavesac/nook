@@ -1,9 +1,38 @@
 // Layout das abas: desenha a barra inferior e diz quais telas pertencem a ela.
 // A ordem dos <Tabs.Screen> aqui é a ordem em que os ícones aparecem na barra.
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Text, View } from 'react-native';
 import { Tabs } from 'expo-router';
 import Ionicons from '@react-native-vector-icons/ionicons';
+import { garantirLogin } from '../services/supabase';
 
 export default function TabsLayout() {
+  // pronto: o login terminou? erro: deu algo errado?
+  const [pronto, setPronto] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  // Roda uma vez quando o app abre: garante o usuário logado ANTES de qualquer tela
+  useEffect(() => {
+    garantirLogin()
+      .then(() => setPronto(true))
+      .catch((e) => setErro(e.message));
+  }, []);
+
+  if (erro) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+        <Text>Não foi possível entrar: {erro}</Text>
+      </View>
+    );
+  }
+
+  if (!pronto) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator />
+      </View>
+    );
+  }
   return (
     <Tabs>
       <Tabs.Screen
