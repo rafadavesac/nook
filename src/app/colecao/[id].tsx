@@ -1,8 +1,8 @@
-// Tela Coleção: nome, filtro Todos/Favoritos e itens agrupados por mês.
+// Tela Coleção: nome, botão "+ Item", filtro Todos/Favoritos e itens agrupados por mês.
 // Não fala com o banco: usa os serviços. Trata 4 estados: carregando, erro, vazio e com itens.
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { buscarItensDaColecao, Item } from '../../services/itens';
 import { buscarColecao, Colecao } from '../../services/colecoes';
 import { agruparPorMes } from '../../utils/agruparPorMes';
@@ -23,20 +23,22 @@ export default function ColecaoTela() {
     buscarColecao(id).then(setColecao).catch((e) => setErro(e.message));
   }, [id]);
 
-  // Busca os itens: roda ao abrir e SEMPRE que o filtro muda
-  useEffect(() => {
-    let cancelado = false; // evita que uma resposta antiga sobrescreva a nova
-    setCarregando(true);
-    setErro(null);
+  // Busca os itens: roda sempre que a tela GANHA FOCO e quando o id ou o filtro mudam
+  useFocusEffect(
+    useCallback(() => {
+      let cancelado = false; // evita que uma resposta antiga sobrescreva a nova
+      setCarregando(true);
+      setErro(null);
 
-    buscarItensDaColecao(id, apenasFavoritos)
-      .then((lista) => { if (!cancelado) setItens(lista); })
-      .catch((e) => { if (!cancelado) setErro(e.message); })
-      .finally(() => { if (!cancelado) setCarregando(false); });
+      buscarItensDaColecao(id, apenasFavoritos)
+        .then((lista) => { if (!cancelado) setItens(lista); })
+        .catch((e) => { if (!cancelado) setErro(e.message); })
+        .finally(() => { if (!cancelado) setCarregando(false); });
 
-    // Função de limpeza: roda antes da próxima busca (ex.: ao trocar o filtro)
-    return () => { cancelado = true; };
-  }, [id, apenasFavoritos]);
+      // Limpeza: roda ao trocar o filtro ou ao sair da tela
+      return () => { cancelado = true; };
+    }, [id, apenasFavoritos])
+  );
 
   const grupos = agruparPorMes(itens);
 
@@ -75,13 +77,24 @@ export default function ColecaoTela() {
       {/* Põe o nome da coleção no cabeçalho da navegação */}
       <Stack.Screen options={{ title: colecao?.name ?? 'Coleção' }} />
 
-      <Text style={estilos.titulo}>{colecao?.name ?? ''}</Text>
-      {!carregando && !erro && (
-        <Text style={estilos.subtitulo}>
-          {itens.length} {itens.length === 1 ? 'conteúdo' : 'conteúdos'}
-          {apenasFavoritos ? ' favoritos' : ' salvos'}
-        </Text>
-      )}
+      {/* Cabeçalho: título e contagem à esquerda, botão "+ Item" à direita */}
+      <View style={estilos.cabecalho}>
+        <View style={{ flex: 1 }}>
+          <Text style={estilos.titulo}>{colecao?.name ?? ''}</Text>
+          {!carregando && !erro && (
+            <Text style={estilos.subtitulo}>
+              {itens.length} {itens.length === 1 ? 'conteúdo' : 'conteúdos'}
+              {apenasFavoritos ? ' favoritos' : ' salvos'}
+            </Text>
+          )}
+        </View>
+        <Pressable
+          onPress={() => router.push({ pathname: '/novo-item', params: { colecaoId: id } })}
+          style={estilos.botaoItem}
+        >
+          <Text style={estilos.botaoItemTexto}>+ Item</Text>
+        </Pressable>
+      </View>
 
       {/* Filtro [Todos] [Favoritos] */}
       <View style={estilos.filtros}>
@@ -105,6 +118,9 @@ export default function ColecaoTela() {
 }
 
 const estilos = StyleSheet.create({
+  cabecalho: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  botaoItem: { backgroundColor: '#4A2250', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8 },
+  botaoItemTexto: { color: '#FFFFFF', fontWeight: '700', fontSize: 13 },
   titulo: { fontSize: 24, fontWeight: '700', color: '#4A2250' },
   subtitulo: { fontSize: 12, color: '#7A6A7D', marginTop: 2 },
   filtros: { flexDirection: 'row', gap: 8, marginVertical: 16 },
