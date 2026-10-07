@@ -1,52 +1,276 @@
-// Tela Início: por enquanto só confirma que a navegação funciona.
-// Os links abaixo são temporários, só para testar rotas com parâmetro.
-// Vão ser removidos quando a tela Início ganhar sua versão real (Etapa 4).
-import { View, Text, StyleSheet } from "react-native";
-import { Link } from "expo-router";
-// 1) No topo, junto dos outros imports:
-import { useEffect, useState } from "react";
-
-import { garantirLogin } from "../services/supabase";
+// Tela Início (aba Pastas): atalho da Caixa de Entrada + grade de coleções + criar coleção.
+// Não fala com o banco direto: usa as funções de services/colecoes e services/itens.
+import { useCallback, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import Ionicons from '@react-native-vector-icons/ionicons';
+import CardColecao from '../components/CardColecao';
+import { buscarColecoes, criarColecao, ColecaoComContagem } from '../services/colecoes';
+import { contarItensDaCaixa } from '../services/itens';
 
 export default function Inicio() {
-  // 2) Dentro do componente, antes do return:
-  const [userId, setUserId] = useState("carregando...");
+  const router = useRouter();
 
-  useEffect(() => {
-    garantirLogin()
-      .then((user) => setUserId(user.id))
-      .catch((e) => setUserId("ERRO: " + e.message));
+  // Estados dos dados
+  const [colecoes, setColecoes] = useState<ColecaoComContagem[]>([]);
+  const [totalCaixa, setTotalCaixa] = useState(0);
+  const [carregando, setCarregando] = useState(true); // só vale na PRIMEIRA carga
+  const [erro, setErro] = useState<string | null>(null);
+
+  // Estados do modal "Nova coleção"
+  const [modalAberto, setModalAberto] = useState(false);
+  const [nomeNovo, setNomeNovo] = useState('');
+  const [criando, setCriando] = useState(false);
+  const [erroCriar, setErroCriar] = useState<string | null>(null);
+
+  // Busca as coleções e a contagem da Caixa ao mesmo tempo (Promise.all).
+  const carregar = useCallback(async () => {
+    try {
+      const [listaColecoes, qtdCaixa] = await Promise.all([
+        buscarColecoes(),
+        contarItensDaCaixa(),
+      ]);
+      return { listaColecoes, qtdCaixa };
+    } catch (e: any) {
+      throw e;
+    }
   }, []);
 
+  // Roda TODA vez que a tela ganha foco (ao abrir e ao voltar de outra tela).
+  // Mesmo padrão "cancelado" da Etapa 3: ignora respostas que chegam depois de sair da tela.
+  useFocusEffect(
+    useCallback(() => {
+      let cancelado = false;
+      carregar()
+        .then(({ listaColecoes, qtdCaixa }) => {
+          if (cancelado) return;
+          setColecoes(listaColecoes);
+          setTotalCaixa(qtdCaixa);
+          setErro(null);
+        })
+        .catch((e) => {
+          if (!cancelado) setErro(e.message);
+        })
+        .finally(() => {
+          if (!cancelado) setCarregando(false);
+        });
+      return () => {
+        cancelado = true;
+      };
+    }, [carregar])
+  );
+
+  function abrirModal() {
+    setNomeNovo('');
+    setErroCriar(null);
+    setModalAberto(true);
+  }
+
+  async function aoCriar() {
+    setCriando(true);
+    setErroCriar(null);
+    try {
+      await criarColecao(nomeNovo); // serviço: faz o INSERT
+      setModalAberto(false);
+      const { listaColecoes, qtdCaixa } = await carregar(); // refaz a lista para a nova aparecer
+      setColecoes(listaColecoes);
+      setTotalCaixa(qtdCaixa);
+    } catch (e: any) {
+      setErroCriar(e.message);
+    } finally {
+      setCriando(false);
+    }
+  }
+
+  // Estado 1: primeira carga
+  if (carregando) {
+    return (
+      <View style={estilos.centro}>
+        <ActivityIndicator />
+      </View>
+    );
+  }
+
+  // Estado 2: erro
+  if (erro) {
+    return (
+      <View style={estilos.centro}>
+        <Text style={estilos.mensagem}>Não foi possível carregar: {erro}</Text>
+      </View>
+    );
+  }
+
+  // Textos do atalho da Caixa
+  const textoCaixa =
+    totalCaixa === 0
+      ? 'Nenhum item para organizar'
+      : totalCaixa === 1
+      ? '1 item para organizar'
+      : `${totalCaixa} itens para organizar`;
+
+  // Estados 3 e 4: vazio e com itens (o vazio é o ListEmptyComponent da lista)
   return (
-    <View style={styles.container}>
-      <Text>user_id: {userId}</Text>
+    <View style={estilos.tela}>
+      <FlatList
+        data={colecoes}
+        keyExtractor={(c) => c.id}
+        numColumns={2}
+        columnWrapperStyle={estilos.linha}
+        contentContainerStyle={estilos.conteudo}
+        ListHeaderComponent={
+          <View>
+            {/* Atalho da Caixa de Entrada */}
+            <Pressable style={estilos.caixa} onPress={() => router.push('/caixa')}>
+              <Ionicons name="mail-outline" size={22} color="#FFFFFF" />
+              <View style={estilos.caixaTextos}>
+                <Text style={estilos.caixaTitulo}>Caixa de entrada</Text>
+                <Text style={estilos.caixaSub}>{textoCaixa}</Text>
+              </View>
+              <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+            </Pressable>
 
-      <Text style={styles.titulo}>Pastas</Text>
+            {/* Título da seção + botão Nova */}
+            <View style={estilos.cabecalho}>
+              <Text style={estilos.secao}>Coleções</Text>
+              <Pressable style={estilos.botaoNova} onPress={abrirModal}>
+                <Ionicons name="add" size={16} color="#FFFFFF" />
+                <Text style={estilos.botaoNovaTexto}>Nova</Text>
+              </Pressable>
+            </View>
+          </View>
+        }
+        ListEmptyComponent={
+          <Text style={estilos.vazio}>
+            Você ainda não tem coleções. Toque em "Nova" para criar a primeira.
+          </Text>
+        }
+        renderItem={({ item }) => (
+          // Cada célula ocupa metade da linha; a tela decide a largura, o card só desenha
+          <View style={estilos.celula}>
+            <CardColecao colecao={item} onPress={() => router.push(`/colecao/${item.id}`)} />
+          </View>
+        )}
+      />
 
-      <Link href="/colecao/6f60d74f-7d2d-475e-89cd-b9101cd8312e" style={styles.link}>
-        Abrir coleção "cursos" (teste)
-      </Link>
-      <Link href="/item/123" style={styles.link}>
-        Abrir item "123" (teste)
-      </Link>
+      {/* Modal: janela sobreposta para nomear a coleção */}
+      <Modal
+        visible={modalAberto}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalAberto(false)}
+      >
+        <KeyboardAvoidingView
+          style={estilos.fundoModal}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={estilos.caixaModal}>
+            <Text style={estilos.tituloModal}>Nova coleção</Text>
+            <TextInput
+              style={estilos.campo}
+              placeholder="Ex.: Livros, Receitas, Viagens"
+              value={nomeNovo}
+              onChangeText={setNomeNovo}
+              autoFocus
+              maxLength={40}
+            />
+            {erroCriar && <Text style={estilos.erroModal}>{erroCriar}</Text>}
+            <View style={estilos.botoesModal}>
+              <Pressable onPress={() => setModalAberto(false)} disabled={criando}>
+                <Text style={estilos.cancelar}>Cancelar</Text>
+              </Pressable>
+              <Pressable style={estilos.criar} onPress={aoCriar} disabled={criando}>
+                {criando ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={estilos.criarTexto}>Criar</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
+const estilos = StyleSheet.create({
+  tela: { flex: 1, backgroundColor: '#F6E9DD' },
+  centro: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+  mensagem: { textAlign: 'center', color: '#2B1B2E' },
+  conteudo: { padding: 16, paddingBottom: 32 },
+  linha: { gap: 12, marginBottom: 12 },
+  celula: { flex: 1, maxWidth: '50%' }, // maxWidth evita que um card sozinho na última linha estique
+  caixa: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#4A2A55',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 20,
+  },
+  caixaTextos: { flex: 1 },
+  caixaTitulo: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  caixaSub: { color: 'rgba(255,255,255,0.75)', fontSize: 12, marginTop: 2 },
+  cabecalho: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  secao: { fontSize: 18, fontWeight: '800', color: '#2B1B2E' },
+  botaoNova: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#4A2A55',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  botaoNovaTexto: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  vazio: { textAlign: 'center', color: '#7A6A7D', marginTop: 24 },
+  fundoModal: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 16,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    padding: 24,
   },
-  titulo: {
-    fontSize: 24,
-    fontWeight: "bold",
+  caixaModal: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, gap: 12 },
+  tituloModal: { fontSize: 16, fontWeight: '800', color: '#2B1B2E' },
+  campo: {
+    borderWidth: 1,
+    borderColor: '#D9C9DD',
+    borderRadius: 10,
+    padding: 10,
+    fontSize: 15,
   },
-  link: {
-    color: "blue",
-    textDecorationLine: "underline",
+  erroModal: { color: '#B3261E', fontSize: 12 },
+  botoesModal: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 20,
   },
+  cancelar: { color: '#7A6A7D', fontWeight: '600' },
+  criar: {
+    backgroundColor: '#4A2A55',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 10,
+    minWidth: 70,
+    alignItems: 'center',
+  },
+  criarTexto: { color: '#FFFFFF', fontWeight: '700' },
 });

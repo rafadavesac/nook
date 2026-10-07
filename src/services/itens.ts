@@ -44,3 +44,18 @@ export async function buscarItensDaColecao(
   if (error) throw error; // a tela decide como mostrar o erro
   return (data ?? []) as Item[];
 }
+
+
+// Conta quantos itens estão na Caixa de Entrada (collection_id vazio).
+// Em SQL: select count(*) from items where collection_id is null;
+// Atenção: para NULL usamos .is(...) e nunca .eq(...), porque em SQL
+// "= null" nunca é verdadeiro (é "is null").
+// head: true significa "não traga as linhas, só me diga quantas são".
+export async function contarItensDaCaixa(): Promise<number> {
+  const { count, error } = await supabase
+    .from('items')
+    .select('*', { count: 'exact', head: true })
+    .is('collection_id', null);
+  if (error) throw error;
+  return count ?? 0;
+}
