@@ -47,6 +47,22 @@ export async function buscarItensDaColecao(
 }
 
 
+// Busca os itens da Caixa de Entrada (os que não têm coleção), do mais recente para o mais antigo.
+// Em SQL, equivale a:
+//   select * from items where collection_id is null order by saved_at desc;
+// É a "prima" de buscarItensDaColecao: muda só o WHERE (.is em vez de .eq,
+// porque NULL nunca se compara com "=").
+export async function buscarItensDaCaixa(): Promise<Item[]> {
+  const { data, error } = await supabase
+    .from('items')
+    .select('*')
+    .is('collection_id', null)
+    .order('saved_at', { ascending: false });
+  if (error) throw error; // a tela decide como mostrar o erro
+  return (data ?? []) as Item[];
+}
+
+
 // Conta quantos itens estão na Caixa de Entrada (collection_id vazio).
 // Em SQL: select count(*) from items where collection_id is null;
 // Atenção: para NULL usamos .is(...) e nunca .eq(...), porque em SQL
