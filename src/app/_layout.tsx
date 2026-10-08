@@ -33,8 +33,11 @@ export default function TabsLayout() {
       </View>
     );
   }
+
   return (
-    <Tabs>
+    // backBehavior="history": o botão voltar leva à última tela visitada
+    // (ex.: Detalhe -> Coleção), em vez de sempre ir para a primeira aba.
+    <Tabs backBehavior="history">
       <Tabs.Screen
         name="index"
         options={{
@@ -86,8 +89,6 @@ export default function TabsLayout() {
       <Tabs.Screen name="item/[id]" options={{ href: null }} />
       {/* Tela que recebe conteúdo compartilhado por outros apps (só teste por enquanto) */}
       <Tabs.Screen name="handle-share" options={{ href: null }} />
-      
     </Tabs>
-    
   );
 }
