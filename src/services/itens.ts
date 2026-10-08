@@ -94,7 +94,7 @@ function montarTags(texto?: string): string[] {
   if (!texto) return [];
   return texto
     .split(',')                         // corta nas vírgulas
-    .map((t) => t.trim().replace(/^#/, '')) // tira espaços e o # do começo
+    .map((t) => t.trim().replace(/^#/, '').toLowerCase()) // tira espaços e o #, e põe em minúsculas
     .filter((t) => t.length > 0);       // descarta os vazios
 }
 
@@ -223,4 +223,48 @@ export async function atualizarItem(id: string, dados: EdicaoItem): Promise<Item
     .single();
   if (error) throw error;
   return data as Item;
+}
+
+// Pesquisa global: acha itens cujo título, nota ou url CONTÉM o texto, ou cuja tag é igual
+// a ele, ou que estão numa coleção cujo nome contém o texto.
+// Em SQL, equivale a:
+//   select * from items
+//   where title ilike '%x%' or note ilike '%x%' or url ilike '%x%'
+//      or tags @> '{x}' or collection_id in (...ids das coleções com "x" no nome...)
+//   order by saved_at desc;
+export async function pesquisarItens(texto: string): Promise<Item[]> {
+  // Tira caracteres que têm significado especial na busca (vírgula, parênteses, chaves,
+  // aspas, %, _ e *). Sem isso, digitar "a,b" quebraria o filtro, e "%" acharia tudo.
+  const termo = texto.replace(/[,(){}%_*"\\]/g, ' ').trim();
+  if (!termo) return [];
+
+  // 1ª consulta: quais coleções têm o termo no nome? (só precisamos dos ids)
+  const { data: colecoes, error: erroColecoes } = await supabase
+    .from('collections')
+    .select('id')
+    .ilike('name', `%${termo}%`);
+  if (erroColecoes) throw erroColecoes;
+
+  // Condições ligadas por OR: basta uma ser verdadeira para o item entrar
+  const condicoes = [
+    `title.ilike.%${termo}%`,
+    `note.ilike.%${termo}%`,
+    `url.ilike.%${termo}%`, // o domínio mora dentro da url
+    `tags.cs.{${termo.toLowerCase()}}`, // cs = "contains": a lista de tags contém este elemento
+  ];
+
+  // Se alguma coleção combinou com o nome, inclui todos os itens dela
+  const ids = (colecoes ?? []).map((c) => c.id);
+  if (ids.length > 0) {
+    condicoes.push(`collection_id.in.(${ids.join(',')})`);
+  }
+
+  // 2ª consulta: os itens
+  const { data, error } = await supabase
+    .from('items')
+    .select('*')
+    .or(condicoes.join(','))
+    .order('saved_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as Item[];
 }

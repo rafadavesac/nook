@@ -1,4 +1,4 @@
-// Tela Início (aba Pastas): atalho da Caixa de Entrada + grade de coleções + criar coleção.
+// Tela Início (aba Pastas): busca global + atalho da Caixa de Entrada + grade de coleções.
 // Não fala com o banco direto: usa as funções de services/colecoes e services/itens.
 import { useCallback, useState } from 'react';
 import {
@@ -16,8 +16,9 @@ import {
 import { useFocusEffect, useRouter } from 'expo-router';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import CardColecao from '../components/CardColecao';
+import CardItem from '../components/CardItem'; // NOVO
 import { buscarColecoes, criarColecao, ColecaoComContagem } from '../services/colecoes';
-import { contarItensDaCaixa } from '../services/itens';
+import { contarItensDaCaixa, pesquisarItens, Item } from '../services/itens'; // NOVO: pesquisarItens e Item
 
 export default function Inicio() {
   const router = useRouter();
@@ -33,6 +34,12 @@ export default function Inicio() {
   const [nomeNovo, setNomeNovo] = useState('');
   const [criando, setCriando] = useState(false);
   const [erroCriar, setErroCriar] = useState<string | null>(null);
+
+  // NOVO: estados da busca. Cada um tem uma responsabilidade:
+  const [texto, setTexto] = useState('');                         // o que está digitado no campo
+  const [resultados, setResultados] = useState<Item[] | null>(null); // null = não há busca ativa
+  const [buscando, setBuscando] = useState(false);                // consulta em andamento
+  const [erroBusca, setErroBusca] = useState<string | null>(null);
 
   // Busca as coleções e a contagem da Caixa ao mesmo tempo (Promise.all).
   const carregar = useCallback(async () => {
@@ -93,6 +100,40 @@ export default function Inicio() {
     }
   }
 
+  // NOVO: roda quando o usuário aperta Enter/Buscar no teclado
+  async function aoBuscar() {
+    const termo = texto.trim();
+    if (!termo) {
+      limparBusca(); // campo vazio = voltar ao normal
+      return;
+    }
+    setBuscando(true);
+    setErroBusca(null);
+    try {
+      setResultados(await pesquisarItens(termo)); // serviço: faz as consultas
+    } catch (e: any) {
+      setErroBusca(e.message);
+    } finally {
+      setBuscando(false);
+    }
+  }
+
+  // NOVO: volta para a tela normal (coleções)
+  function limparBusca() {
+    setTexto('');
+    setResultados(null);
+    setErroBusca(null);
+  }
+
+  // NOVO: guarda o que foi digitado; se o campo ficou vazio, encerra a busca
+  function aoDigitar(novo: string) {
+    setTexto(novo);
+    if (novo === '') {
+      setResultados(null);
+      setErroBusca(null);
+    }
+  }
+
   // Estado 1: primeira carga
   if (carregando) {
     return (
@@ -119,49 +160,106 @@ export default function Inicio() {
       ? '1 item para organizar'
       : `${totalCaixa} itens para organizar`;
 
-  // Estados 3 e 4: vazio e com itens (o vazio é o ListEmptyComponent da lista)
+  // NOVO: há busca em andamento ou com resultado para mostrar?
+  const emBusca = buscando || erroBusca !== null || resultados !== null;
+
   return (
     <View style={estilos.tela}>
-      <FlatList
-        data={colecoes}
-        keyExtractor={(c) => c.id}
-        numColumns={2}
-        columnWrapperStyle={estilos.linha}
-        contentContainerStyle={estilos.conteudo}
-        ListHeaderComponent={
-          <View>
-            {/* Atalho da Caixa de Entrada */}
-            <Pressable style={estilos.caixa} onPress={() => router.push('/caixa')}>
-              <Ionicons name="mail-outline" size={22} color="#FFFFFF" />
-              <View style={estilos.caixaTextos}>
-                <Text style={estilos.caixaTitulo}>Caixa de entrada</Text>
-                <Text style={estilos.caixaSub}>{textoCaixa}</Text>
-              </View>
-              <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
-            </Pressable>
-
-            {/* Título da seção + botão Nova */}
-            <View style={estilos.cabecalho}>
-              <Text style={estilos.secao}>Coleções</Text>
-              <Pressable style={estilos.botaoNova} onPress={abrirModal}>
-                <Ionicons name="add" size={16} color="#FFFFFF" />
-                <Text style={estilos.botaoNovaTexto}>Nova</Text>
-              </Pressable>
-            </View>
-          </View>
-        }
-        ListEmptyComponent={
-          <Text style={estilos.vazio}>
-            Você ainda não tem coleções. Toque em "Nova" para criar a primeira.
-          </Text>
-        }
-        renderItem={({ item }) => (
-          // Cada célula ocupa metade da linha; a tela decide a largura, o card só desenha
-          <View style={estilos.celula}>
-            <CardColecao colecao={item} onPress={() => router.push(`/colecao/${item.id}`)} />
-          </View>
+      {/* NOVO: campo de busca, sempre visível no topo */}
+      <View style={estilos.buscaBox}>
+        <Ionicons name="search-outline" size={18} color="#7A6A7D" />
+        <TextInput
+          style={estilos.buscaCampo}
+          placeholder="Buscar por título, nota, tag, coleção..."
+          value={texto}
+          onChangeText={aoDigitar}
+          onSubmitEditing={aoBuscar}
+          returnKeyType="search"
+        />
+        {texto.length > 0 && (
+          <Pressable onPress={limparBusca} hitSlop={8}>
+            <Ionicons name="close-circle" size={18} color="#7A6A7D" />
+          </Pressable>
         )}
-      />
+      </View>
+
+      {/* NOVO: com busca ativa mostra os resultados; senão, a tela normal de sempre */}
+      {emBusca ? (
+        buscando ? (
+          <ActivityIndicator style={{ marginTop: 40 }} />
+        ) : erroBusca ? (
+          <Text style={estilos.aviso}>Não foi possível buscar: {erroBusca}</Text>
+        ) : (
+          <FlatList
+            data={resultados ?? []}
+            keyExtractor={(i) => i.id}
+            numColumns={2}
+            columnWrapperStyle={estilos.linha}
+            contentContainerStyle={estilos.conteudo}
+            ListHeaderComponent={
+              resultados && resultados.length > 0 ? (
+                <Text style={estilos.contagem}>
+                  {resultados.length} {resultados.length === 1 ? 'resultado' : 'resultados'}
+                </Text>
+              ) : null
+            }
+            ListEmptyComponent={
+              <Text style={estilos.aviso}>
+                Nenhum resultado.{'\n'}Tente outra palavra, um pedaço do título ou o nome de uma tag.
+              </Text>
+            }
+            renderItem={({ item }) => (
+              <View style={estilos.celula}>
+                <CardItem
+                  item={item}
+                  onPress={() => router.push({ pathname: '/item/[id]', params: { id: item.id } })}
+                />
+              </View>
+            )}
+          />
+        )
+      ) : (
+        <FlatList
+          data={colecoes}
+          keyExtractor={(c) => c.id}
+          numColumns={2}
+          columnWrapperStyle={estilos.linha}
+          contentContainerStyle={estilos.conteudo}
+          ListHeaderComponent={
+            <View>
+              {/* Atalho da Caixa de Entrada */}
+              <Pressable style={estilos.caixa} onPress={() => router.push('/caixa')}>
+                <Ionicons name="mail-outline" size={22} color="#FFFFFF" />
+                <View style={estilos.caixaTextos}>
+                  <Text style={estilos.caixaTitulo}>Caixa de entrada</Text>
+                  <Text style={estilos.caixaSub}>{textoCaixa}</Text>
+                </View>
+                <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+              </Pressable>
+
+              {/* Título da seção + botão Nova */}
+              <View style={estilos.cabecalho}>
+                <Text style={estilos.secao}>Coleções</Text>
+                <Pressable style={estilos.botaoNova} onPress={abrirModal}>
+                  <Ionicons name="add" size={16} color="#FFFFFF" />
+                  <Text style={estilos.botaoNovaTexto}>Nova</Text>
+                </Pressable>
+              </View>
+            </View>
+          }
+          ListEmptyComponent={
+            <Text style={estilos.vazio}>
+              Você ainda não tem coleções. Toque em "Nova" para criar a primeira.
+            </Text>
+          }
+          renderItem={({ item }) => (
+            // Cada célula ocupa metade da linha; a tela decide a largura, o card só desenha
+            <View style={estilos.celula}>
+              <CardColecao colecao={item} onPress={() => router.push(`/colecao/${item.id}`)} />
+            </View>
+          )}
+        />
+      )}
 
       {/* Modal: janela sobreposta para nomear a coleção */}
       <Modal
@@ -211,6 +309,23 @@ const estilos = StyleSheet.create({
   conteudo: { padding: 16, paddingBottom: 32 },
   linha: { gap: 12, marginBottom: 12 },
   celula: { flex: 1, maxWidth: '50%' }, // maxWidth evita que um card sozinho na última linha estique
+  // NOVO: estilos da busca
+  buscaBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D9C9DD',
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginTop: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  buscaCampo: { flex: 1, fontSize: 14, paddingVertical: 8, color: '#2B1B2E' },
+  contagem: { fontSize: 12, color: '#7A6A7D', marginBottom: 12 },
+  aviso: { marginTop: 40, textAlign: 'center', color: '#7A6A7D', paddingHorizontal: 24 },
   caixa: {
     flexDirection: 'row',
     alignItems: 'center',
