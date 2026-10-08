@@ -225,46 +225,70 @@ export async function atualizarItem(id: string, dados: EdicaoItem): Promise<Item
   return data as Item;
 }
 
-// Pesquisa global: acha itens cujo título, nota ou url CONTÉM o texto, ou cuja tag é igual
-// a ele, ou que estão numa coleção cujo nome contém o texto.
+// NOVO: descreve ONDE procurar. Cada tela diz o seu escopo.
+// "type" com valores fixos permite ao editor avisar se alguém escrever um escopo que não existe.
+export type EscopoBusca =
+  | { tipo: 'global' }                      // Início: todos os itens
+  | { tipo: 'colecao'; colecaoId: string }  // dentro de uma coleção
+  | { tipo: 'caixa' };                      // só itens sem coleção
+
+// Pesquisa itens cujo título, nota ou url CONTÉM o texto, ou cuja tag é igual a ele.
+// No escopo global, também acha itens de coleções cujo nome contém o texto.
 // Em SQL, equivale a:
 //   select * from items
-//   where title ilike '%x%' or note ilike '%x%' or url ilike '%x%'
-//      or tags @> '{x}' or collection_id in (...ids das coleções com "x" no nome...)
+//   where (title ilike '%x%' or note ilike '%x%' or url ilike '%x%' or tags @> '{x}'
+//          [or collection_id in (...)])        -- só no escopo global
+//     [and collection_id = '...']               -- escopo coleção
+//     [and collection_id is null]               -- escopo caixa
 //   order by saved_at desc;
-export async function pesquisarItens(texto: string): Promise<Item[]> {
-  // Tira caracteres que têm significado especial na busca (vírgula, parênteses, chaves,
-  // aspas, %, _ e *). Sem isso, digitar "a,b" quebraria o filtro, e "%" acharia tudo.
+// O escopo tem valor padrão "global", então a chamada do Início continua igual.
+export async function pesquisarItens(
+  texto: string,
+  escopo: EscopoBusca = { tipo: 'global' }
+): Promise<Item[]> {
+  // Tira caracteres com significado especial na busca (vírgula, parênteses, chaves,
+  // aspas, %, _ e *), para o texto digitado não virar parte da instrução.
   const termo = texto.replace(/[,(){}%_*"\\]/g, ' ').trim();
   if (!termo) return [];
 
-  // 1ª consulta: quais coleções têm o termo no nome? (só precisamos dos ids)
-  const { data: colecoes, error: erroColecoes } = await supabase
-    .from('collections')
-    .select('id')
-    .ilike('name', `%${termo}%`);
-  if (erroColecoes) throw erroColecoes;
-
-  // Condições ligadas por OR: basta uma ser verdadeira para o item entrar
+  // Condições de texto, ligadas por OR: basta uma ser verdadeira
   const condicoes = [
     `title.ilike.%${termo}%`,
     `note.ilike.%${termo}%`,
     `url.ilike.%${termo}%`, // o domínio mora dentro da url
-    `tags.cs.{${termo.toLowerCase()}}`, // cs = "contains": a lista de tags contém este elemento
+    `tags.cs.{${termo.toLowerCase()}}`, // a lista de tags contém este elemento (exato, minúsculo)
   ];
 
-  // Se alguma coleção combinou com o nome, inclui todos os itens dela
-  const ids = (colecoes ?? []).map((c) => c.id);
-  if (ids.length > 0) {
-    condicoes.push(`collection_id.in.(${ids.join(',')})`);
+  // NOVO: a busca por nome de coleção só faz sentido no escopo global.
+  // Dentro de uma coleção ou da Caixa, todos os itens já estão no mesmo lugar.
+  if (escopo.tipo === 'global') {
+    const { data: colecoes, error: erroColecoes } = await supabase
+      .from('collections')
+      .select('id')
+      .ilike('name', `%${termo}%`);
+    if (erroColecoes) throw erroColecoes;
+
+    const ids = (colecoes ?? []).map((c) => c.id);
+    if (ids.length > 0) {
+      condicoes.push(`collection_id.in.(${ids.join(',')})`);
+    }
   }
 
-  // 2ª consulta: os itens
-  const { data, error } = await supabase
+  let consulta = supabase
     .from('items')
     .select('*')
-    .or(condicoes.join(','))
+    .or(condicoes.join(',')) // (título OU nota OU url OU tag ...)
     .order('saved_at', { ascending: false });
+
+  // NOVO: filtros encadeados depois do .or entram com "E" (AND).
+  // Lê-se: "(condições de texto) E está neste lugar".
+  if (escopo.tipo === 'colecao') {
+    consulta = consulta.eq('collection_id', escopo.colecaoId);
+  } else if (escopo.tipo === 'caixa') {
+    consulta = consulta.is('collection_id', null); // NULL: sempre .is, nunca .eq
+  }
+
+  const { data, error } = await consulta;
   if (error) throw error;
   return (data ?? []) as Item[];
 }
