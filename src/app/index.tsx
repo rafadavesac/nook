@@ -16,9 +16,10 @@ import {
 import { useFocusEffect, useRouter } from 'expo-router';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import CardColecao from '../components/CardColecao';
-import CardItem from '../components/CardItem'; // NOVO
+import CardItem from '../components/CardItem';
 import { buscarColecoes, criarColecao, ColecaoComContagem } from '../services/colecoes';
-import { contarItensDaCaixa, pesquisarItens, Item } from '../services/itens'; // NOVO: pesquisarItens e Item
+import { contarItensDaCaixa } from '../services/itens'; // MUDOU: pesquisarItens e Item saíram (o hook cuida)
+import { useBusca } from '../hooks/useBusca'; // MUDOU: import novo
 
 export default function Inicio() {
   const router = useRouter();
@@ -35,11 +36,11 @@ export default function Inicio() {
   const [criando, setCriando] = useState(false);
   const [erroCriar, setErroCriar] = useState<string | null>(null);
 
-  // NOVO: estados da busca. Cada um tem uma responsabilidade:
-  const [texto, setTexto] = useState('');                         // o que está digitado no campo
-  const [resultados, setResultados] = useState<Item[] | null>(null); // null = não há busca ativa
-  const [buscando, setBuscando] = useState(false);                // consulta em andamento
-  const [erroBusca, setErroBusca] = useState<string | null>(null);
+  // MUDOU: os 4 estados da busca (e as 3 funções) foram para o hook useBusca.
+  // A tela só diz ONDE procurar (escopo global); o hook cuida do debounce e dos estados.
+  const { texto, setTexto, resultados, buscando, erroBusca, emBusca, limpar } = useBusca({
+    tipo: 'global',
+  });
 
   // Busca as coleções e a contagem da Caixa ao mesmo tempo (Promise.all).
   const carregar = useCallback(async () => {
@@ -100,39 +101,7 @@ export default function Inicio() {
     }
   }
 
-  // NOVO: roda quando o usuário aperta Enter/Buscar no teclado
-  async function aoBuscar() {
-    const termo = texto.trim();
-    if (!termo) {
-      limparBusca(); // campo vazio = voltar ao normal
-      return;
-    }
-    setBuscando(true);
-    setErroBusca(null);
-    try {
-      setResultados(await pesquisarItens(termo)); // serviço: faz as consultas
-    } catch (e: any) {
-      setErroBusca(e.message);
-    } finally {
-      setBuscando(false);
-    }
-  }
-
-  // NOVO: volta para a tela normal (coleções)
-  function limparBusca() {
-    setTexto('');
-    setResultados(null);
-    setErroBusca(null);
-  }
-
-  // NOVO: guarda o que foi digitado; se o campo ficou vazio, encerra a busca
-  function aoDigitar(novo: string) {
-    setTexto(novo);
-    if (novo === '') {
-      setResultados(null);
-      setErroBusca(null);
-    }
-  }
+  // MUDOU: aoBuscar, limparBusca e aoDigitar foram apagadas (agora vivem no hook).
 
   // Estado 1: primeira carga
   if (carregando) {
@@ -160,30 +129,28 @@ export default function Inicio() {
       ? '1 item para organizar'
       : `${totalCaixa} itens para organizar`;
 
-  // NOVO: há busca em andamento ou com resultado para mostrar?
-  const emBusca = buscando || erroBusca !== null || resultados !== null;
+  // MUDOU: a linha "const emBusca = ..." foi apagada (o hook já entrega o emBusca).
 
   return (
     <View style={estilos.tela}>
-      {/* NOVO: campo de busca, sempre visível no topo */}
+      {/* Campo de busca, sempre visível no topo */}
       <View style={estilos.buscaBox}>
         <Ionicons name="search-outline" size={18} color="#7A6A7D" />
         <TextInput
           style={estilos.buscaCampo}
           placeholder="Buscar por título, nota, tag, coleção..."
           value={texto}
-          onChangeText={aoDigitar}
-          onSubmitEditing={aoBuscar}
-          returnKeyType="search"
+          onChangeText={setTexto} // MUDOU: direto no setTexto do hook; a busca dispara sozinha após 400 ms
+          returnKeyType="search"  // MUDOU: onSubmitEditing saiu (o Enter só fecha o teclado)
         />
         {texto.length > 0 && (
-          <Pressable onPress={limparBusca} hitSlop={8}>
+          <Pressable onPress={limpar} hitSlop={8}>{/* MUDOU: onPress={limpar} */}
             <Ionicons name="close-circle" size={18} color="#7A6A7D" />
           </Pressable>
         )}
       </View>
 
-      {/* NOVO: com busca ativa mostra os resultados; senão, a tela normal de sempre */}
+      {/* Com busca ativa mostra os resultados; senão, a tela normal de sempre */}
       {emBusca ? (
         buscando ? (
           <ActivityIndicator style={{ marginTop: 40 }} />
@@ -196,6 +163,7 @@ export default function Inicio() {
             numColumns={2}
             columnWrapperStyle={estilos.linha}
             contentContainerStyle={estilos.conteudo}
+            keyboardShouldPersistTaps="handled" // MUDOU: o 1º toque num card/X não é "gasto" fechando o teclado
             ListHeaderComponent={
               resultados && resultados.length > 0 ? (
                 <Text style={estilos.contagem}>
@@ -309,7 +277,7 @@ const estilos = StyleSheet.create({
   conteudo: { padding: 16, paddingBottom: 32 },
   linha: { gap: 12, marginBottom: 12 },
   celula: { flex: 1, maxWidth: '50%' }, // maxWidth evita que um card sozinho na última linha estique
-  // NOVO: estilos da busca
+  // Estilos da busca
   buscaBox: {
     flexDirection: 'row',
     alignItems: 'center',
