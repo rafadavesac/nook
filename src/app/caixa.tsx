@@ -1,4 +1,4 @@
-// Tela Caixa de Entrada: itens salvos que ainda não têm coleção, agrupados por mês, com busca.
+// Tela Caixa de Entrada: itens salvos que ainda não têm coleção, agrupados por mês, com busca (debounce).
 // Não fala com o banco: usa o serviço. Trata 4 estados: carregando, erro, vazio e com itens.
 import { useCallback, useState } from 'react';
 import {
@@ -11,10 +11,11 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import Ionicons from '@react-native-vector-icons/ionicons'; // NOVO
-import { buscarItensDaCaixa, pesquisarItens, Item } from '../services/itens'; // NOVO: pesquisarItens
-import { agruparPorMes, GrupoMes } from '../utils/agruparPorMes'; // NOVO: GrupoMes
+import Ionicons from '@react-native-vector-icons/ionicons';
+import { buscarItensDaCaixa, Item } from '../services/itens'; // MUDOU: pesquisarItens saiu
+import { agruparPorMes, GrupoMes } from '../utils/agruparPorMes';
 import CardItem from '../components/CardItem';
+import { useBusca } from '../hooks/useBusca'; // MUDOU: import novo
 
 export default function CaixaTela() {
   const router = useRouter();
@@ -23,11 +24,11 @@ export default function CaixaTela() {
   const [carregando, setCarregando] = useState(true); // só vale na primeira carga
   const [erro, setErro] = useState<string | null>(null);
 
-  // NOVO: estados da busca (mesmos papéis do Início e da Coleção)
-  const [texto, setTexto] = useState('');                            // o que está no campo
-  const [resultados, setResultados] = useState<Item[] | null>(null); // null = sem busca ativa
-  const [buscando, setBuscando] = useState(false);
-  const [erroBusca, setErroBusca] = useState<string | null>(null);
+  // MUDOU: os 4 estados da busca e as 3 funções foram para o hook.
+  // A tela só diz ONDE procurar: na Caixa.
+  const { texto, setTexto, resultados, buscando, erroBusca, emBusca, limpar } = useBusca({
+    tipo: 'caixa',
+  });
 
   // Roda a cada vez que a tela GANHA FOCO (a aba fica montada em segundo plano,
   // então um useEffect não rodaria ao voltar e a lista ficaria desatualizada).
@@ -47,46 +48,10 @@ export default function CaixaTela() {
     }, [])
   );
 
-  // NOVO: roda quando o usuário aperta Enter/Buscar no teclado
-  async function aoBuscar() {
-    const termo = texto.trim();
-    if (!termo) {
-      limparBusca();
-      return;
-    }
-    setBuscando(true);
-    setErroBusca(null);
-    try {
-      // O escopo diz ONDE procurar: só nos itens sem coleção
-      setResultados(await pesquisarItens(termo, { tipo: 'caixa' }));
-    } catch (e: any) {
-      setErroBusca(e.message);
-    } finally {
-      setBuscando(false);
-    }
-  }
-
-  // NOVO: volta à lista normal da Caixa
-  function limparBusca() {
-    setTexto('');
-    setResultados(null);
-    setErroBusca(null);
-  }
-
-  // NOVO: guarda o que foi digitado; se o campo ficou vazio, encerra a busca
-  function aoDigitar(novo: string) {
-    setTexto(novo);
-    if (novo === '') {
-      setResultados(null);
-      setErroBusca(null);
-    }
-  }
-
-  // NOVO: com busca ativa, agrupamos os RESULTADOS; senão, a lista normal
-  const emBusca = buscando || erroBusca !== null || resultados !== null;
+  // Com busca ativa, agrupamos os RESULTADOS; senão, a lista normal
   const grupos = agruparPorMes(emBusca ? resultados ?? [] : itens);
 
-  // NOVO: desenha os grupos por mês (usado pela lista normal e pelos resultados)
+  // Desenha os grupos por mês (usado pela lista normal e pelos resultados)
   function desenharGrupos(lista: GrupoMes[]) {
     return lista.map((g) => (
       <View key={g.titulo} style={{ marginBottom: 20 }}>
@@ -150,19 +115,18 @@ export default function CaixaTela() {
             </Text>
           )}
 
-      {/* NOVO: campo de busca */}
+      {/* Campo de busca */}
       <View style={estilos.buscaBox}>
         <Ionicons name="search-outline" size={18} color="#7A6A7D" />
         <TextInput
           style={estilos.buscaCampo}
           placeholder="Pesquisar na Caixa de entrada"
           value={texto}
-          onChangeText={aoDigitar}
-          onSubmitEditing={aoBuscar}
-          returnKeyType="search"
+          onChangeText={setTexto} // MUDOU: direto no hook; a busca dispara após 400 ms
+          returnKeyType="search"  // MUDOU: onSubmitEditing saiu
         />
         {texto.length > 0 && (
-          <Pressable onPress={limparBusca} hitSlop={8}>
+          <Pressable onPress={limpar} hitSlop={8}>{/* MUDOU: onPress={limpar} */}
             <Ionicons name="close-circle" size={18} color="#7A6A7D" />
           </Pressable>
         )}
@@ -177,7 +141,6 @@ export default function CaixaTela() {
 const estilos = StyleSheet.create({
   titulo: { fontSize: 24, fontWeight: '700', color: '#4A2250' },
   subtitulo: { fontSize: 12, color: '#7A6A7D', marginTop: 2 },
-  // NOVO: estilos do campo de busca
   buscaBox: {
     flexDirection: 'row',
     alignItems: 'center',
