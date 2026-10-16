@@ -7,6 +7,7 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, Text
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { criarItem } from '../services/itens';
 import { buscarColecoes, ColecaoComContagem } from '../services/colecoes';
+import SeletorDeColecao from '../components/SeletorDeColecao';
 
 type Aba = 'url' | 'texto';
 
@@ -143,18 +144,8 @@ export default function NovoItem() {
 
       <TextInput style={estilos.campo} placeholder="Título (opcional)" value={titulo} onChangeText={setTitulo} />
 
-      {/* Salvar em: Caixa de entrada + coleções */}
-      <Text style={estilos.rotulo}>Salvar em</Text>
-      <View style={estilos.linhaQuebra}>
-        <Pressable onPress={() => setColecaoId(null)} style={[estilos.chip, colecaoId === null && estilos.chipAtivo]}>
-          <Text style={[estilos.chipTexto, colecaoId === null && estilos.chipTextoAtivo]}>Caixa de entrada</Text>
-        </Pressable>
-        {colecoes.map((c) => (
-          <Pressable key={c.id} onPress={() => setColecaoId(c.id)} style={[estilos.chip, colecaoId === c.id && estilos.chipAtivo]}>
-            <Text style={[estilos.chipTexto, colecaoId === c.id && estilos.chipTextoAtivo]}>{c.name}</Text>
-          </Pressable>
-        ))}
-      </View>
+           {/* Salvar em: Caixa de entrada + coleções (o estado colecaoId continua aqui na tela) */}
+      <SeletorDeColecao colecoes={colecoes} valor={colecaoId} aoEscolher={setColecaoId} />
 
       <TextInput
         style={estilos.campo}
@@ -207,13 +198,11 @@ const estilos = StyleSheet.create({
   container: { padding: 16, gap: 12 },
   titulo: { fontSize: 24, fontWeight: '700', color: '#4A2250' },
   linha: { flexDirection: 'row', gap: 8 },
-  linhaQuebra: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, backgroundColor: '#EFE3EA' },
   chipAtivo: { backgroundColor: '#4A2250' },
   chipTexto: { fontSize: 12, color: '#4A2250', fontWeight: '600' },
   chipTextoAtivo: { color: '#FFFFFF' },
   campo: { backgroundColor: '#FFFFFF', borderRadius: 10, padding: 12, fontSize: 14, color: '#2B1B2E' },
-  rotulo: { fontSize: 12, color: '#7A6A7D', marginBottom: -4 },
   erro: { color: '#B3261E', fontSize: 13 },
   botao: { backgroundColor: '#4A2250', borderRadius: 10, padding: 14, alignItems: 'center' },
   botaoTexto: { color: '#FFFFFF', fontWeight: '700' },
