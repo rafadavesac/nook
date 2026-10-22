@@ -5,6 +5,14 @@ import { ActivityIndicator, Text, View } from 'react-native';
 import { Tabs } from 'expo-router';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { garantirLogin } from '../services/supabase';
+import { ThemeProvider, DefaultTheme } from 'expo-router/react-navigation';
+
+// Tema do Nook: o tema padrão da navegação, só com o fundo trocado pelo bege do app.
+// Toda tela sem fundo próprio herda essa cor.
+const temaNook = {
+  ...DefaultTheme,
+  colors: { ...DefaultTheme.colors, background: '#F7EBE3' },
+};
 
 export default function TabsLayout() {
   // pronto: o login terminou? erro: deu algo errado?
@@ -37,6 +45,7 @@ export default function TabsLayout() {
   return (
     // backBehavior="history": o botão voltar leva à última tela visitada
     // (ex.: Detalhe -> Coleção), em vez de sempre ir para a primeira aba.
+    <ThemeProvider value={temaNook}>
     <Tabs backBehavior="history">
       <Tabs.Screen
         name="index"
@@ -84,11 +93,17 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* Rotas dinâmicas: existem e recebem parâmetro, mas não ganham botão na barra */}
-      <Tabs.Screen name="colecao/[id]" options={{ href: null }} />
-      <Tabs.Screen name="item/[id]" options={{ href: null }} />
+           {/* Rotas escondidas da barra (href: null). Os arquivos continuam existindo:
+          favoritos volta na Etapa 11 e ajustes na Etapa 13. */}
+      <Tabs.Screen name="favoritos" options={{ href: null }} />
+      <Tabs.Screen name="ajustes" options={{ href: null }} />
+
+      {/* Rotas dinâmicas: sem botão na barra e sem cabeçalho (cada tela tem o próprio título) */}
+      <Tabs.Screen name="colecao/[id]" options={{ href: null, headerShown: false }} />
+      <Tabs.Screen name="item/[id]" options={{ href: null, headerShown: false }} />
       {/* Tela que recebe conteúdo compartilhado por outros apps (só teste por enquanto) */}
       <Tabs.Screen name="handle-share" options={{ href: null }} />
     </Tabs>
+    </ThemeProvider>
   );
 }

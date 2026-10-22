@@ -271,7 +271,7 @@ export default function Inicio() {
 }
 
 const estilos = StyleSheet.create({
-  tela: { flex: 1, backgroundColor: '#F6E9DD' },
+  tela: { flex: 1 },
   centro: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   mensagem: { textAlign: 'center', color: '#2B1B2E' },
   conteudo: { padding: 16, paddingBottom: 32 },

@@ -8,6 +8,7 @@ import Ionicons from '@react-native-vector-icons/ionicons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { buscarItem, alternarFavorito, moverItem, excluirItem, atualizarItem, Item } from '../../services/itens';
 import { buscarColecao, buscarColecoes, ColecaoComContagem } from '../../services/colecoes';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Mini-componente local: um rótulo pequeno com o valor embaixo.
 function Campo({ rotulo, valor }: { rotulo: string; valor: string }) {
@@ -22,6 +23,7 @@ function Campo({ rotulo, valor }: { rotulo: string; valor: string }) {
 export default function DetalheDoItem() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets(); // altura da barra de status do aparelho
 
   const [item, setItem] = useState<Item | null>(null);
   const [nomeColecao, setNomeColecao] = useState<string>('Caixa de entrada');
@@ -243,7 +245,13 @@ export default function DetalheDoItem() {
     >
       <ScrollView
     style={estilos.tela}
-    contentContainerStyle={[estilos.conteudo, tecladoAberto && { paddingBottom: 100 }]}
+    contentContainerStyle={
+      [
+      estilos.conteudo,
+      { paddingTop: 20 + insets.top }, // os 20 de sempre + a barra de status
+      tecladoAberto && { paddingBottom: 100 },
+    ]
+    }
     keyboardShouldPersistTaps="handled"
   >
       <View style={estilos.topo}>
@@ -443,7 +451,7 @@ export default function DetalheDoItem() {
 }
 
 const estilos = StyleSheet.create({
-  tela: { flex: 1, backgroundColor: '#F7EBE3' },
+  tela: { flex: 1 },
   conteudo: { padding: 20, paddingBottom: 40 },
   centro: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7EBE3' },
   topo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
