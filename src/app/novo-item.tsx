@@ -125,6 +125,7 @@ export default function NovoItem() {
       {aba === 'url' ? (
         <TextInput
           style={estilos.campo}
+          placeholderTextColor="#7A6A7D"
           placeholder="Cole o endereço (https://...)"
           value={url}
           onChangeText={setUrl}
@@ -135,6 +136,7 @@ export default function NovoItem() {
       ) : (
         <TextInput
           style={[estilos.campo, { minHeight: 110, textAlignVertical: 'top' }]}
+          placeholderTextColor="#7A6A7D"
           placeholder="Escreva o texto que quer guardar"
           value={texto}
           onChangeText={setTexto}
@@ -142,13 +144,14 @@ export default function NovoItem() {
         />
       )}
 
-      <TextInput style={estilos.campo} placeholder="Título (opcional)" value={titulo} onChangeText={setTitulo} />
+      <TextInput style={estilos.campo} placeholderTextColor="#7A6A7D" placeholder="Título (opcional)" value={titulo} onChangeText={setTitulo} />
 
-           {/* Salvar em: Caixa de entrada + coleções (o estado colecaoId continua aqui na tela) */}
+      {/* Salvar em: Caixa de entrada + coleções (o estado colecaoId continua aqui na tela) */}
       <SeletorDeColecao colecoes={colecoes} valor={colecaoId} aoEscolher={setColecaoId} />
 
       <TextInput
         style={estilos.campo}
+        placeholderTextColor="#7A6A7D"
         placeholder="Tags separadas por vírgula (opcional)"
         value={tags}
         onChangeText={setTags}
@@ -156,6 +159,7 @@ export default function NovoItem() {
       />
       <TextInput
         style={[estilos.campo, { minHeight: 70, textAlignVertical: 'top' }]}
+        placeholderTextColor="#7A6A7D"
         placeholder="Nota pessoal: por que você quer guardar isso? (opcional)"
         value={nota}
         onChangeText={setNota}

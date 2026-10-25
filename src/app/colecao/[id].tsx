@@ -143,8 +143,9 @@ export default function ColecaoTela() {
       {/* Campo de busca */}
       <View style={estilos.buscaBox}>
         <Ionicons name="search-outline" size={18} color="#7A6A7D" />
-        <TextInput
+                <TextInput
           style={estilos.buscaCampo}
+          placeholderTextColor="#7A6A7D"
           placeholder={`Pesquisar em ${colecao?.name ?? 'coleção'}`}
           value={texto}
           onChangeText={setTexto} // MUDOU: direto no hook; a busca dispara após 400 ms

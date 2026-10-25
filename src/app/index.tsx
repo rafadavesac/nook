@@ -136,8 +136,9 @@ export default function Inicio() {
       {/* Campo de busca, sempre visível no topo */}
       <View style={estilos.buscaBox}>
         <Ionicons name="search-outline" size={18} color="#7A6A7D" />
-        <TextInput
+                <TextInput
           style={estilos.buscaCampo}
+          placeholderTextColor="#7A6A7D"
           placeholder="Buscar por título, nota, tag, coleção..."
           value={texto}
           onChangeText={setTexto} // MUDOU: direto no setTexto do hook; a busca dispara sozinha após 400 ms
@@ -242,8 +243,9 @@ export default function Inicio() {
         >
           <View style={estilos.caixaModal}>
             <Text style={estilos.tituloModal}>Nova coleção</Text>
-            <TextInput
+                        <TextInput
               style={estilos.campo}
+              placeholderTextColor="#7A6A7D"
               placeholder="Ex.: Livros, Receitas, Viagens"
               value={nomeNovo}
               onChangeText={setNomeNovo}

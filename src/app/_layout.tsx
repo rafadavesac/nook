@@ -43,67 +43,52 @@ export default function TabsLayout() {
   }
 
   return (
-    // backBehavior="history": o botão voltar leva à última tela visitada
-    // (ex.: Detalhe -> Coleção), em vez de sempre ir para a primeira aba.
+    // ThemeProvider: aplica o fundo bege (temaNook) em todas as telas.
     <ThemeProvider value={temaNook}>
-    <Tabs backBehavior="history">
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Pastas',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="folder-outline" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="favoritos"
-        options={{
-          title: 'Favoritos',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="star-outline" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="novo-item"
-        options={{
-          title: 'Novo item',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="add-circle" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="caixa"
-        options={{
-          title: 'Caixa',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="mail-outline" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="ajustes"
-        options={{
-          title: 'Ajustes',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings-outline" color={color} size={size} />
-          ),
-        }}
-      />
+      {/* backBehavior="history": o botão voltar leva à última tela visitada
+          (ex.: Detalhe -> Coleção), em vez de sempre ir para a primeira aba. */}
+      <Tabs backBehavior="history">
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: 'Pastas',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="folder-outline" color={color} size={size} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="novo-item"
+          options={{
+            title: 'Novo item',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="add-circle" color={color} size={size} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="caixa"
+          options={{
+            title: 'Caixa',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="mail-outline" color={color} size={size} />
+            ),
+          }}
+        />
 
-           {/* Rotas escondidas da barra (href: null). Os arquivos continuam existindo:
-          favoritos volta na Etapa 11 e ajustes na Etapa 13. */}
-      <Tabs.Screen name="favoritos" options={{ href: null }} />
-      <Tabs.Screen name="ajustes" options={{ href: null }} />
+        {/* Escondidas da barra (href: null) até serem construídas.
+            Os arquivos continuam existindo: favoritos volta na Etapa 11 e ajustes na Etapa 13. */}
+        <Tabs.Screen name="favoritos" options={{ href: null }} />
+        <Tabs.Screen name="ajustes" options={{ href: null }} />
 
-      {/* Rotas dinâmicas: sem botão na barra e sem cabeçalho (cada tela tem o próprio título) */}
-      <Tabs.Screen name="colecao/[id]" options={{ href: null, headerShown: false }} />
-      <Tabs.Screen name="item/[id]" options={{ href: null, headerShown: false }} />
-      {/* Tela que recebe conteúdo compartilhado por outros apps (só teste por enquanto) */}
-      <Tabs.Screen name="handle-share" options={{ href: null }} />
-    </Tabs>
+        {/* Rotas dinâmicas: sem botão na barra.
+            colecao/[id] mantém o cabeçalho (mostra o nome da coleção, definido na própria tela);
+            item/[id] não tem cabeçalho (a tela tem o próprio topo). */}
+        <Tabs.Screen name="colecao/[id]" options={{ href: null }} />
+        <Tabs.Screen name="item/[id]" options={{ href: null, headerShown: false }} />
+        {/* Tela que recebe conteúdo compartilhado por outros apps (só teste por enquanto) */}
+        <Tabs.Screen name="handle-share" options={{ href: null }} />
+      </Tabs>
     </ThemeProvider>
   );
 }
