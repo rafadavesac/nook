@@ -71,7 +71,3 @@ Você precisa de um projeto Supabase próprio, com as tabelas `collections` e `i
    ```bash
    npx expo start --dev-client
    ```
-
-## Licença
-
-Veja o arquivo [LICENSE](LICENSE).
