@@ -1,56 +1,77 @@
-# Welcome to your Expo app 
+# Nook
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Aplicativo mobile pessoal para **guardar, organizar e reencontrar** links, textos e (em breve) imagens.
 
-## Get started
+O Nook é um projeto de aprendizado: o foco é entender cada parte de um app real, do banco de dados à tela.
 
-1. Install dependencies
+## O que já funciona
+
+- Salvar links e textos, com título, nota e tags
+- Organizar em coleções; itens sem coleção ficam na **Caixa de Entrada**
+- Marcar favoritos e filtrar por **Todos / Favoritos**
+- Itens agrupados por mês
+- Pesquisa por título, nota, tags, coleção e domínio
+- Tela de detalhe: editar, mover de coleção, favoritar, abrir o conteúdo original e excluir (com confirmação)
+- Receber conteúdo pelo menu **Compartilhar** do celular (testado no Android)
+
+## Próximos passos
+
+- Imagens da galeria (upload no Supabase Storage)
+- Aba global de Favoritos
+- Pré-visualização automática de links
+- Tela de Ajustes e polimento visual
+
+## Tecnologias
+
+- [React Native](https://reactnative.dev/) + [Expo](https://expo.dev/) (Expo Router)
+- [Supabase](https://supabase.com/): Postgres, autenticação anônima e RLS (Row Level Security)
+- [expo-sharing](https://docs.expo.dev/versions/latest/sdk/sharing/) para receber conteúdo compartilhado
+- TypeScript
+
+## Estrutura
+
+```
+src/
+├── app/         telas e rotas (Expo Router)
+├── components/  peças visuais reutilizáveis
+├── hooks/       lógica de estado reutilizável
+├── services/    comunicação com o Supabase
+└── utils/       funções puras (agrupar por mês, separar título e link...)
+```
+
+As telas nunca falam direto com o banco: elas chamam os `services`, que conversam com o Supabase.
+
+## Como rodar
+
+Você precisa de um projeto Supabase próprio, com as tabelas `collections` e `items`, login anônimo ligado e RLS ativada.
+
+1. Instale as dependências:
 
    ```bash
    npm install
    ```
 
-2. Start the app
+2. Crie um arquivo `.env` na raiz com as chaves do **seu** projeto Supabase:
 
-   ```bash
-   npx expo start
+   ```
+   EXPO_PUBLIC_SUPABASE_URL=https://seu-projeto.supabase.co
+   EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sua-chave-publishable
    ```
 
-In the output, you'll find options to open the app in a
+   Use apenas a chave *publishable*. Nunca coloque chaves secretas no app.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+3. Gere um development build (o recebimento de compartilhamento não funciona no Expo Go):
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+   ```bash
+   eas build --platform android --profile development
+   ```
 
-## Get a fresh project
+4. Com o build instalado no celular, inicie o servidor:
 
-When you're ready, run:
+   ```bash
+   npx expo start --dev-client
+   ```
 
-```bash
-npm run reset-project
-```
+## Licença
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-### Other setup steps
-
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Veja o arquivo [LICENSE](LICENSE).
